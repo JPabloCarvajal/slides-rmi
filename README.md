@@ -108,19 +108,13 @@ servidor no pasan por ese filtro.
 ---
 
 Linux — servidor (slides-rmi/slides-server):
-
-bash
 mvn clean package && java -jar target/slides-server.jar
 
-Linux — cliente (slides-rmi/slides-client):
-
-bash
+Linux — cliente (slides-rmi/slides-client)
 mvn clean package && java -jar target/slides-client.jar
 
 Windows — servidor (slides-rmi\slides-server):
-
 mvn clean package && java -jar target\slides-server.jar
 
 Windows — cliente (slides-rmi\slides-client):
-
 mvn clean package && java -jar target\slides-client.jar
