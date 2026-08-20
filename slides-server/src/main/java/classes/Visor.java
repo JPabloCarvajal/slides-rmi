@@ -14,7 +14,7 @@ public class Visor extends JFrame {
 
     private final Diapositivas diapositivas;
     private int actual = 1;
-    private boolean completa = false;
+    private volatile boolean completa = false;
 
     private final JLabel lienzo = new JLabel("", SwingConstants.CENTER);
     private final JLabel aviso = new JLabel();
@@ -56,15 +56,20 @@ public class Visor extends JFrame {
         pintar();
     }
 
-    public synchronized void pantallaCompleta(boolean on) {
-        if (on == completa) return;
-        completa = on;
-        GraphicsDevice pantalla = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        dispose();
-        setUndecorated(on);
-        pantalla.setFullScreenWindow(on ? this : null);
-        setVisible(true);
-        recolocar();
+        public void pantallaCompleta(boolean on) {
+        synchronized (this) {
+            if (on == completa) return;
+            completa = on;
+        }
+        // Las operaciones de ventana solo puede hacerlas el hilo de Swing
+        SwingUtilities.invokeLater(() -> {
+            GraphicsDevice pantalla = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+            dispose();
+            setUndecorated(on);
+            pantalla.setFullScreenWindow(on ? this : null);
+            setVisible(true);
+            recolocar();
+        });
     }
 
     public synchronized int actual() {
@@ -125,6 +130,10 @@ public class Visor extends JFrame {
 
     // Dibuja la diapositiva actual escalada, manteniendo la proporcion.
     private void pintar() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::pintar);
+            return;
+        }
         BufferedImage img = diapositivas.imagen(actual);
         if (img == null) return;
         int w = Math.max(lienzo.getWidth(), 100);

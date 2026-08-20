@@ -10,7 +10,7 @@ import javax.swing.JOptionPane;
 public class ImpRMI extends UnicastRemoteObject implements iRMI {
 
     private static final long serialVersionUID = 1L;
-    private static final long VENTANA_MS = 1000;
+    private static final long VENTANA_MS = 500;
 
     private final Visor visor;
     private final Map<String, String> tokens = new HashMap<>();
