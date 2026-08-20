@@ -4,6 +4,8 @@ import java.rmi.Naming;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+// Arranque del mando: solo busca el objeto remoto y abre la ventana.
+// El permiso se pide desde el boton Conectar.
 public class Main {
 
     private static final int PUERTO = 1082;
@@ -21,13 +23,7 @@ public class Main {
             String n = nombre.trim();
             iRMI servicio = (iRMI) Naming.lookup("rmi://" + host.trim() + ":" + PUERTO + "/control");
 
-            String token = servicio.conectar(n);
-            if (token == null) {
-                JOptionPane.showMessageDialog(null, "El servidor rechazo la conexion.");
-                return;
-            }
-
-            SwingUtilities.invokeLater(() -> new Control(servicio, token, n).setVisible(true));
+            SwingUtilities.invokeLater(() -> new Control(servicio, n).setVisible(true));
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "No se pudo conectar:\n\n" + e,

@@ -3,25 +3,29 @@ package classes;
 import java.awt.*;
 import javax.swing.*;
 
-// El mando: cuatro botones que invocan metodos remotos en el servidor.
-// No pinta diapositivas, solo envia ordenes y muestra en cual quedo.
+// El mando: se conecta bajo demanda y luego invoca metodos remotos.
 public class Control extends JFrame {
 
     private final iRMI servicio;
-    private final String token;
-    private final JLabel estado = new JLabel("...", SwingConstants.CENTER);
+    private final String nombre;
+    private volatile String token = null;
+
+    private final JButton bConectar = new JButton("Conectar");
+    private final JPanel botones = new JPanel(new GridLayout(2, 2, 6, 6));
+    private final JLabel estado = new JLabel("sin conectar", SwingConstants.CENTER);
     private boolean completa = false;
 
-    public Control(iRMI servicio, String token, String nombre) {
+    public Control(iRMI servicio, String nombre) {
         super("Control - " + nombre);
         this.servicio = servicio;
-        this.token = token;
+        this.nombre = nombre;
 
         JButton bAtras = new JButton("<");
         JButton bSiguiente = new JButton(">");
         JButton bIr = new JButton("Ir a...");
         JButton bCompleta = new JButton("Pantalla completa");
 
+        bConectar.addActionListener(e -> conectar());
         bAtras.addActionListener(e -> enviar(() -> servicio.atras(token)));
         bSiguiente.addActionListener(e -> enviar(() -> servicio.siguiente(token)));
         bIr.addActionListener(e -> {
@@ -39,30 +43,59 @@ public class Control extends JFrame {
             enviar(() -> servicio.pantallaCompleta(token, completa));
         });
 
-        JPanel botones = new JPanel(new GridLayout(2, 2, 6, 6));
         botones.add(bAtras);
         botones.add(bSiguiente);
         botones.add(bIr);
         botones.add(bCompleta);
+        habilitar(false);
 
         setLayout(new BorderLayout(6, 6));
+        add(bConectar, BorderLayout.NORTH);
         add(botones, BorderLayout.CENTER);
         add(estado, BorderLayout.SOUTH);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(280, 160);
+        setSize(280, 200);
         setLocationRelativeTo(null);
-
-        enviar(() -> servicio.siguiente(token) == -1 ? -1 : servicio.irA(token, 1));
     }
 
-    // Envia la orden en otro hilo para no congelar la ventana,
-    // y actualiza la etiqueta con la diapositiva que devuelve el servidor.
+    // Pide permiso al servidor. Bloquea hasta que el operador responda,
+    // por eso corre en otro hilo.
+    private void conectar() {
+        bConectar.setEnabled(false);
+        estado.setText("esperando permiso...");
+
+        new Thread(() -> {
+            String t = null;
+            String texto;
+            try {
+                t = servicio.conectar(nombre);
+                texto = t == null ? "conexion rechazada"
+                                  : "conectado - " + servicio.total(t) + " diapositivas";
+            } catch (Exception ex) {
+                texto = "sin conexion";
+            }
+            String tk = t;
+            String msg = texto;
+            SwingUtilities.invokeLater(() -> {
+                token = tk;
+                habilitar(tk != null);
+                bConectar.setEnabled(tk == null);
+                estado.setText(msg);
+            });
+        }).start();
+    }
+
     private void enviar(Llamada llamada) {
+        if (token == null) {
+            estado.setText("conecta primero");
+            return;
+        }
         new Thread(() -> {
             String texto;
             try {
                 int actual = llamada.ejecutar();
-                texto = actual == -1 ? "sin permiso" : "diapositiva " + actual + " / " + servicio.total(token);
+                texto = actual == -1 ? "sin permiso"
+                                     : "diapositiva " + actual + " / " + servicio.total(token);
             } catch (Exception ex) {
                 texto = "sin conexion";
             }
@@ -71,7 +104,10 @@ public class Control extends JFrame {
         }).start();
     }
 
-    // Una llamada remota cualquiera que devuelve un int.
+    private void habilitar(boolean on) {
+        for (Component c : botones.getComponents()) c.setEnabled(on);
+    }
+
     private interface Llamada {
         int ejecutar() throws Exception;
     }
