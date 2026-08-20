@@ -4,23 +4,34 @@ import java.rmi.Naming;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
-// Arranque del mando: busca el objeto remoto, pide permiso y abre la ventana.
 public class Main {
 
-    public static void main(String[] args) throws Exception {
-        String host = "192.168.80.31";
-        String nombre = "guayaba";
+    private static final int PUERTO = 1082;
 
-        iRMI servicio = (iRMI) Naming.lookup("rmi://" + host + ":1082/control");
-        System.out.println("Conectado a " + host + ", pidiendo permiso...");
+    public static void main(String[] args) {
+        try {
+            String host = args.length > 0 ? args[0]
+                    : JOptionPane.showInputDialog(null, "IP del servidor:", "192.168.1.9");
+            if (host == null || host.isBlank()) return;
 
-        String token = servicio.conectar(nombre);
-        if (token == null) {
-            JOptionPane.showMessageDialog(null, "El servidor rechazo la conexion.");
-            return;
+            String nombre = args.length > 1 ? args[1]
+                    : JOptionPane.showInputDialog(null, "Nombre de este control:", "guayaba");
+            if (nombre == null || nombre.isBlank()) return;
+
+            String n = nombre.trim();
+            iRMI servicio = (iRMI) Naming.lookup("rmi://" + host.trim() + ":" + PUERTO + "/control");
+
+            String token = servicio.conectar(n);
+            if (token == null) {
+                JOptionPane.showMessageDialog(null, "El servidor rechazo la conexion.");
+                return;
+            }
+
+            SwingUtilities.invokeLater(() -> new Control(servicio, token, n).setVisible(true));
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "No se pudo conectar:\n\n" + e,
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
-        System.out.println("Permiso concedido. Diapositivas: " + servicio.total(token));
-
-        SwingUtilities.invokeLater(() -> new Control(servicio, token, nombre).setVisible(true));
     }
 }
