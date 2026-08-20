@@ -2,6 +2,9 @@
 
 Presentación de diapositivas controlada por red con **Java RMI**.
 
+
+mvn compile exec:java -Dexec.mainClass=classes.Main
+
 El **servidor** abre el PDF y lo proyecta en su pantalla. El **cliente** es un mando a
 distancia: solo envía órdenes. Por la red nunca viajan imágenes.
 
